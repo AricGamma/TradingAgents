@@ -20,8 +20,8 @@ def create_news_analyst(llm):
         ]
 
         system_message = (
-            "You are a news researcher tasked with analyzing recent news and trends over the past week. Please write a comprehensive report of the current state of the world that is relevant for trading and macroeconomics. Use the available tools: get_news(query, start_date, end_date) for company-specific or targeted news searches, and get_global_news(curr_date, look_back_days, limit) for broader macroeconomic news. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
+            "你是一名新闻研究员，负责分析近期新闻和趋势。请撰写一份全面的报告，涵盖当前全球状态，与交易和宏观经济相关。使用可用工具：get_news(query, start_date, end_date) 用于公司特定或目标新闻搜索，get_global_news(curr_date, look_back_days, limit) 用于更广泛的宏观经济新闻。提供具体、可操作的洞察，辅以支持证据，帮助交易者做出知情决策。**请使用中文回复。**"
+            + """ 在报告末尾附上一个 Markdown 表格，整理报告中的关键点，使其有条理且易于阅读。"""
         )
 
         prompt = ChatPromptTemplate.from_messages(

@@ -48,17 +48,45 @@ VALID_MODELS = {
         "grok-4-fast-reasoning",
         "grok-4-fast-non-reasoning",
     ],
+    "bailian": [
+        # Qwen (通义千问) series
+        "qwen-max",
+        "qwen-plus",
+        "qwen-turbo",
+        "qwen-long",
+        "qwq-plus",
+        "qwen2.5-72b-instruct",
+        "qwen2.5-32b-instruct",
+        # Qwen 3.5 series (latest generation)
+        "qwen3.5",
+        "qwen3.5-turbo",
+        "qwen3.5-plus",
+        "qwen3.5-max",
+        "qwen3.5-coder",
+        # Qwen 3 series
+        "qwen3",
+        "qwen3-turbo",
+        "qwen3-plus",
+        # Coding Plan 代码模型
+        "qwen3-coder-next",
+        "qwen3-coder-plus",
+        "qwen3-max-2026-01-23",
+        "glm-5",
+        "glm-4.7",
+        "kimi-k2.5",
+        "MiniMax-M2.5",
+    ],
 }
 
 
 def validate_model(provider: str, model: str) -> bool:
     """Check if model name is valid for the given provider.
 
-    For ollama, openrouter - any model is accepted.
+    For ollama, openrouter, bailian, bailian_coding_plan - any model is accepted.
     """
     provider_lower = provider.lower()
 
-    if provider_lower in ("ollama", "openrouter"):
+    if provider_lower in ("ollama", "openrouter", "bailian", "bailian_coding_plan"):
         return True
 
     if provider_lower not in VALID_MODELS:

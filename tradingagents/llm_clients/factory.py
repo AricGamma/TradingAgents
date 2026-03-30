@@ -4,6 +4,8 @@ from .base_client import BaseLLMClient
 from .openai_client import OpenAIClient
 from .anthropic_client import AnthropicClient
 from .google_client import GoogleClient
+from .bailian_client import BailianClient
+from .bailian_coding_plan_client import BailianCodingPlanClient
 
 
 def create_llm_client(
@@ -15,7 +17,7 @@ def create_llm_client(
     """Create an LLM client for the specified provider.
 
     Args:
-        provider: LLM provider (openai, anthropic, google, xai, ollama, openrouter)
+        provider: LLM provider (openai, anthropic, google, xai, ollama, openrouter, bailian, bailian_coding_plan)
         model: Model name/identifier
         base_url: Optional base URL for API endpoint
         **kwargs: Additional provider-specific arguments
@@ -45,5 +47,11 @@ def create_llm_client(
 
     if provider_lower == "google":
         return GoogleClient(model, base_url, **kwargs)
+
+    if provider_lower == "bailian":
+        return BailianClient(model, base_url, **kwargs)
+
+    if provider_lower == "bailian_coding_plan":
+        return BailianCodingPlanClient(model, base_url, **kwargs)
 
     raise ValueError(f"Unsupported LLM provider: {provider}")

@@ -23,11 +23,13 @@ def create_portfolio_manager(llm, memory):
 
         prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision.
 
+**IMPORTANT: Please provide your entire response in Chinese (Simplified).**
+
 {instrument_context}
 
 ---
 
-**Rating Scale** (use exactly one):
+**Rating Scale** (use exactly one, keep in English):
 - **Buy**: Strong conviction to enter or add to position
 - **Overweight**: Favorable outlook, gradually increase exposure
 - **Hold**: Maintain current position, no action needed
@@ -38,10 +40,10 @@ def create_portfolio_manager(llm, memory):
 - Trader's proposed plan: **{trader_plan}**
 - Lessons from past decisions: **{past_memory_str}**
 
-**Required Output Structure:**
-1. **Rating**: State one of Buy / Overweight / Hold / Underweight / Sell.
-2. **Executive Summary**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon.
-3. **Investment Thesis**: Detailed reasoning anchored in the analysts' debate and past reflections.
+**Required Output Structure (in Chinese):**
+1. **评级 (Rating)**: State one of Buy / Overweight / Hold / Underweight / Sell.
+2. **执行摘要 (Executive Summary)**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon.
+3. **投资论据 (Investment Thesis)**: Detailed reasoning anchored in the analysts' debate and past reflections.
 
 ---
 
@@ -50,7 +52,7 @@ def create_portfolio_manager(llm, memory):
 
 ---
 
-Be decisive and ground every conclusion in specific evidence from the analysts."""
+Be decisive and ground every conclusion in specific evidence from the analysts. Remember to write your response in Chinese except for the Rating which should be in English."""
 
         response = llm.invoke(prompt)
 
@@ -61,8 +63,12 @@ Be decisive and ground every conclusion in specific evidence from the analysts."
             "conservative_history": risk_debate_state["conservative_history"],
             "neutral_history": risk_debate_state["neutral_history"],
             "latest_speaker": "Judge",
-            "current_aggressive_response": risk_debate_state["current_aggressive_response"],
-            "current_conservative_response": risk_debate_state["current_conservative_response"],
+            "current_aggressive_response": risk_debate_state[
+                "current_aggressive_response"
+            ],
+            "current_conservative_response": risk_debate_state[
+                "current_conservative_response"
+            ],
             "current_neutral_response": risk_debate_state["current_neutral_response"],
             "count": risk_debate_state["count"],
         }

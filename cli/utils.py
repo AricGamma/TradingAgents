@@ -58,8 +58,10 @@ def get_analysis_date() -> str:
 
     date = questionary.text(
         "Enter the analysis date (YYYY-MM-DD):",
-        validate=lambda x: validate_date(x.strip())
-        or "Please enter a valid date in YYYY-MM-DD format.",
+        validate=lambda x: (
+            validate_date(x.strip())
+            or "Please enter a valid date in YYYY-MM-DD format."
+        ),
         style=questionary.Style(
             [
                 ("text", "fg:green"),
@@ -147,29 +149,71 @@ def select_shallow_thinking_agent(provider) -> str:
             ("GPT-4.1 - Smartest non-reasoning model", "gpt-4.1"),
         ],
         "anthropic": [
-            ("Claude Sonnet 4.6 - Best speed and intelligence balance", "claude-sonnet-4-6"),
+            (
+                "Claude Sonnet 4.6 - Best speed and intelligence balance",
+                "claude-sonnet-4-6",
+            ),
             ("Claude Haiku 4.5 - Fast, near-instant responses", "claude-haiku-4-5"),
             ("Claude Sonnet 4.5 - Agents and coding", "claude-sonnet-4-5"),
         ],
         "google": [
             ("Gemini 3 Flash - Next-gen fast", "gemini-3-flash-preview"),
             ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
-            ("Gemini 3.1 Flash Lite - Most cost-efficient", "gemini-3.1-flash-lite-preview"),
+            (
+                "Gemini 3.1 Flash Lite - Most cost-efficient",
+                "gemini-3.1-flash-lite-preview",
+            ),
             ("Gemini 2.5 Flash Lite - Fast, low-cost", "gemini-2.5-flash-lite"),
         ],
         "xai": [
-            ("Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx", "grok-4-1-fast-non-reasoning"),
-            ("Grok 4 Fast (Non-Reasoning) - Speed optimized", "grok-4-fast-non-reasoning"),
-            ("Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx", "grok-4-1-fast-reasoning"),
+            (
+                "Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx",
+                "grok-4-1-fast-non-reasoning",
+            ),
+            (
+                "Grok 4 Fast (Non-Reasoning) - Speed optimized",
+                "grok-4-fast-non-reasoning",
+            ),
+            (
+                "Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx",
+                "grok-4-1-fast-reasoning",
+            ),
         ],
         "openrouter": [
-            ("NVIDIA Nemotron 3 Nano 30B (free)", "nvidia/nemotron-3-nano-30b-a3b:free"),
+            (
+                "NVIDIA Nemotron 3 Nano 30B (free)",
+                "nvidia/nemotron-3-nano-30b-a3b:free",
+            ),
             ("Z.AI GLM 4.5 Air (free)", "z-ai/glm-4.5-air:free"),
         ],
         "ollama": [
-            ("Qwen3:latest (8B, local)", "qwen3:latest"),
-            ("GPT-OSS:latest (20B, local)", "gpt-oss:latest"),
             ("GLM-4.7-Flash:latest (30B, local)", "glm-4.7-flash:latest"),
+            ("GPT-OSS:latest (20B, local)", "gpt-oss:latest"),
+            ("Qwen3:latest (8B, local)", "qwen3:latest"),
+        ],
+        "bailian": [
+            # Qwen 3.5 series (推荐 - 最新一代)
+            ("Qwen3.5-Max - Most capable [Latest]", "qwen3.5-max"),
+            ("Qwen3.5-Plus - Enhanced reasoning [Latest]", "qwen3.5-plus"),
+            ("Qwen3.5 - Balanced performance [Latest]", "qwen3.5"),
+            # Qwen 3 series
+            ("Qwen3 - Smart & efficient", "qwen3"),
+            ("Qwen3-Plus - Advanced reasoning", "qwen3-plus"),
+            # Legacy Qwen series (older generation)
+            ("Qwen-Max - Previous gen flagship", "qwen-max"),
+            ("Qwen-Plus - Previous gen balanced", "qwen-plus"),
+        ],
+        "bailian_coding_plan": [
+            # Qwen 3.5 series coding models (推荐)
+            ("Qwen3.5-Coder - Advanced coding [Recommended]", "qwen3.5-coder"),
+            ("Qwen3.5-Max - Most capable", "qwen3.5-max"),
+            ("Qwen3.5-Plus - Enhanced reasoning", "qwen3.5-plus"),
+            # Qwen3 Coder specialized
+            ("Qwen3-Coder-Next - Best coding model", "qwen3-coder-next"),
+            ("Qwen3-Coder-Plus - Coding balanced", "qwen3-coder-plus"),
+            # Other Coding Plan models
+            ("GLM-5 - GLM series", "glm-5"),
+            ("Kimi-K2.5 - Long context specialist", "kimi-k2.5"),
         ],
     }
 
@@ -209,34 +253,80 @@ def select_deep_thinking_agent(provider) -> str:
             ("GPT-5.4 - Latest frontier, 1M context", "gpt-5.4"),
             ("GPT-5.2 - Strong reasoning, cost-effective", "gpt-5.2"),
             ("GPT-5 Mini - Balanced speed, cost, and capability", "gpt-5-mini"),
-            ("GPT-5.4 Pro - Most capable, expensive ($30/$180 per 1M tokens)", "gpt-5.4-pro"),
+            (
+                "GPT-5.4 Pro - Most capable, expensive ($30/$180 per 1M tokens)",
+                "gpt-5.4-pro",
+            ),
         ],
         "anthropic": [
-            ("Claude Opus 4.6 - Most intelligent, agents and coding", "claude-opus-4-6"),
+            (
+                "Claude Opus 4.6 - Most intelligent, agents and coding",
+                "claude-opus-4-6",
+            ),
             ("Claude Opus 4.5 - Premium, max intelligence", "claude-opus-4-5"),
-            ("Claude Sonnet 4.6 - Best speed and intelligence balance", "claude-sonnet-4-6"),
+            (
+                "Claude Sonnet 4.6 - Best speed and intelligence balance",
+                "claude-sonnet-4-6",
+            ),
             ("Claude Sonnet 4.5 - Agents and coding", "claude-sonnet-4-5"),
         ],
         "google": [
-            ("Gemini 3.1 Pro - Reasoning-first, complex workflows", "gemini-3.1-pro-preview"),
+            (
+                "Gemini 3.1 Pro - Reasoning-first, complex workflows",
+                "gemini-3.1-pro-preview",
+            ),
             ("Gemini 3 Flash - Next-gen fast", "gemini-3-flash-preview"),
             ("Gemini 2.5 Pro - Stable pro model", "gemini-2.5-pro"),
             ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
         ],
         "xai": [
             ("Grok 4 - Flagship model", "grok-4-0709"),
-            ("Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx", "grok-4-1-fast-reasoning"),
+            (
+                "Grok 4.1 Fast (Reasoning) - High-performance, 2M ctx",
+                "grok-4-1-fast-reasoning",
+            ),
             ("Grok 4 Fast (Reasoning) - High-performance", "grok-4-fast-reasoning"),
-            ("Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx", "grok-4-1-fast-non-reasoning"),
+            (
+                "Grok 4.1 Fast (Non-Reasoning) - Speed optimized, 2M ctx",
+                "grok-4-1-fast-non-reasoning",
+            ),
         ],
         "openrouter": [
             ("Z.AI GLM 4.5 Air (free)", "z-ai/glm-4.5-air:free"),
-            ("NVIDIA Nemotron 3 Nano 30B (free)", "nvidia/nemotron-3-nano-30b-a3b:free"),
+            (
+                "NVIDIA Nemotron 3 Nano 30B (free)",
+                "nvidia/nemotron-3-nano-30b-a3b:free",
+            ),
         ],
         "ollama": [
             ("GLM-4.7-Flash:latest (30B, local)", "glm-4.7-flash:latest"),
             ("GPT-OSS:latest (20B, local)", "gpt-oss:latest"),
             ("Qwen3:latest (8B, local)", "qwen3:latest"),
+        ],
+        "bailian": [
+            # Qwen 3.5 series (推荐 - 最新一代)
+            ("Qwen3.5-Max - Most capable, complex tasks [Latest]", "qwen3.5-max"),
+            ("Qwen3.5-Plus - Enhanced reasoning & coding [Latest]", "qwen3.5-plus"),
+            ("Qwen3.5 - Balanced performance [Latest]", "qwen3.5"),
+            # Qwen 3 series
+            ("Qwen3 - Smart & efficient", "qwen3"),
+            ("Qwen3-Plus - Advanced reasoning", "qwen3-plus"),
+            # Legacy Qwen series (older generation)
+            ("Qwen-Max - Previous gen flagship", "qwen-max"),
+            ("Qwen-Plus - Previous gen balanced", "qwen-plus"),
+            ("QwQ-Plus - Enhanced reasoning", "qwq-plus"),
+        ],
+        "bailian_coding_plan": [
+            # Qwen 3.5 series coding models (推荐)
+            ("Qwen3.5-Coder - Advanced coding [Recommended]", "qwen3.5-coder"),
+            ("Qwen3.5-Max - Most capable", "qwen3.5-max"),
+            ("Qwen3.5-Plus - Enhanced reasoning", "qwen3.5-plus"),
+            # Qwen3 Coder specialized
+            ("Qwen3-Coder-Next - Best coding model", "qwen3-coder-next"),
+            ("Qwen3-Coder-Plus - Coding balanced", "qwen3-coder-plus"),
+            # Other Coding Plan models
+            ("GLM-5 - GLM series", "glm-5"),
+            ("Kimi-K2.5 - Long context specialist", "kimi-k2.5"),
         ],
     }
 
@@ -262,23 +352,34 @@ def select_deep_thinking_agent(provider) -> str:
 
     return choice
 
+
 def select_llm_provider() -> tuple[str, str]:
-    """Select the OpenAI api url using interactive selection."""
-    # Define OpenAI api options with their corresponding endpoints
-    BASE_URLS = [
-        ("OpenAI", "https://api.openai.com/v1"),
-        ("Google", "https://generativelanguage.googleapis.com/v1"),
-        ("Anthropic", "https://api.anthropic.com/"),
-        ("xAI", "https://api.x.ai/v1"),
-        ("Openrouter", "https://openrouter.ai/api/v1"),
-        ("Ollama", "http://localhost:11434/v1"),
+    """Select the LLM provider and return provider key + base URL."""
+    # Define LLM provider options: (display_name, provider_key, base_url)
+    PROVIDER_OPTIONS = [
+        ("OpenAI", "openai", "https://api.openai.com/v1"),
+        ("Google", "google", "https://generativelanguage.googleapis.com/v1"),
+        ("Anthropic", "anthropic", "https://api.anthropic.com/"),
+        ("xAI", "xai", "https://api.x.ai/v1"),
+        ("Openrouter", "openrouter", "https://openrouter.ai/api/v1"),
+        ("Ollama", "ollama", "http://localhost:11434/v1"),
+        (
+            "Bailian Standard (百炼 API - 按量付费)",
+            "bailian",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
+        (
+            "Bailian Coding Plan (百炼编程套餐 - $50/月)",
+            "bailian_coding_plan",
+            "https://coding.dashscope.aliyuncs.com/v1",
+        ),
     ]
-    
+
     choice = questionary.select(
         "Select your LLM Provider:",
         choices=[
-            questionary.Choice(display, value=(display, value))
-            for display, value in BASE_URLS
+            questionary.Choice(display, value=(display, provider_key, url))
+            for display, provider_key, url in PROVIDER_OPTIONS
         ],
         instruction="\n- Use arrow keys to navigate\n- Press Enter to select",
         style=questionary.Style(
@@ -289,15 +390,15 @@ def select_llm_provider() -> tuple[str, str]:
             ]
         ),
     ).ask()
-    
-    if choice is None:
-        console.print("\n[red]no OpenAI backend selected. Exiting...[/red]")
-        exit(1)
-    
-    display_name, url = choice
-    print(f"You selected: {display_name}\tURL: {url}")
 
-    return display_name, url
+    if choice is None:
+        console.print("\n[red]no LLM provider selected. Exiting...[/red]")
+        exit(1)
+
+    display_name, provider_key, url = choice
+    print(f"You selected: {display_name}\tProvider: {provider_key}\tURL: {url}")
+
+    return provider_key, url
 
 
 def ask_openai_reasoning_effort() -> str:
@@ -310,11 +411,13 @@ def ask_openai_reasoning_effort() -> str:
     return questionary.select(
         "Select Reasoning Effort:",
         choices=choices,
-        style=questionary.Style([
-            ("selected", "fg:cyan noinherit"),
-            ("highlighted", "fg:cyan noinherit"),
-            ("pointer", "fg:cyan noinherit"),
-        ]),
+        style=questionary.Style(
+            [
+                ("selected", "fg:cyan noinherit"),
+                ("highlighted", "fg:cyan noinherit"),
+                ("pointer", "fg:cyan noinherit"),
+            ]
+        ),
     ).ask()
 
 
@@ -330,11 +433,13 @@ def ask_anthropic_effort() -> str | None:
             questionary.Choice("Medium (balanced)", "medium"),
             questionary.Choice("Low (faster, cheaper)", "low"),
         ],
-        style=questionary.Style([
-            ("selected", "fg:cyan noinherit"),
-            ("highlighted", "fg:cyan noinherit"),
-            ("pointer", "fg:cyan noinherit"),
-        ]),
+        style=questionary.Style(
+            [
+                ("selected", "fg:cyan noinherit"),
+                ("highlighted", "fg:cyan noinherit"),
+                ("pointer", "fg:cyan noinherit"),
+            ]
+        ),
     ).ask()
 
 
@@ -350,9 +455,11 @@ def ask_gemini_thinking_config() -> str | None:
             questionary.Choice("Enable Thinking (recommended)", "high"),
             questionary.Choice("Minimal/Disable Thinking", "minimal"),
         ],
-        style=questionary.Style([
-            ("selected", "fg:green noinherit"),
-            ("highlighted", "fg:green noinherit"),
-            ("pointer", "fg:green noinherit"),
-        ]),
+        style=questionary.Style(
+            [
+                ("selected", "fg:green noinherit"),
+                ("highlighted", "fg:green noinherit"),
+                ("pointer", "fg:green noinherit"),
+            ]
+        ),
     ).ask()
