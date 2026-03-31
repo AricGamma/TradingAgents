@@ -55,8 +55,11 @@ class OpenAIClient(BaseLLMClient):
         """Return configured ChatOpenAI instance."""
         llm_kwargs = {"model": self.model}
 
-        # Provider-specific base URL and auth
-        if self.provider in _PROVIDER_CONFIG:
+        # Priority 1: Explicit base_url provided to the client
+        if self.base_url:
+            llm_kwargs["base_url"] = self.base_url
+        # Priority 2: Provider-specific default base URL
+        elif self.provider in _PROVIDER_CONFIG:
             base_url, api_key_env = _PROVIDER_CONFIG[self.provider]
             llm_kwargs["base_url"] = base_url
             if api_key_env:
@@ -65,8 +68,6 @@ class OpenAIClient(BaseLLMClient):
                     llm_kwargs["api_key"] = api_key
             else:
                 llm_kwargs["api_key"] = "ollama"
-        elif self.base_url:
-            llm_kwargs["base_url"] = self.base_url
 
         # Forward user-provided kwargs
         for key in _PASSTHROUGH_KWARGS:

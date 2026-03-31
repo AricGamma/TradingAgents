@@ -459,38 +459,65 @@ def update_display(layout, spinner_text=None, stats_handler=None, start_time=Non
     layout["footer"].update(Panel(stats_table, border_style="grey50"))
 
 
-def get_user_selections():
-    """Get all user selections before starting the analysis display."""
-    # Display ASCII art welcome message
-    with open(Path(__file__).parent / "static" / "welcome.txt", "r") as f:
-        welcome_ascii = f.read()
+# Global provider configuration mapping
+SUPPORTED_PROVIDERS = {
+    "openai": "https://api.openai.com/v1",
+    "google": "https://generativelanguage.googleapis.com/v1",
+    "anthropic": "https://api.anthropic.com/",
+    "xai": "https://api.x.ai/v1",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "ollama": "http://localhost:11434/v1",
+    "bailian": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "bailian_coding_plan": "https://coding.dashscope.aliyuncs.com/v1",
+}
 
-    # Create welcome box content
-    welcome_content = f"{welcome_ascii}\n"
-    welcome_content += "[bold green]TradingAgents: Multi-Agents LLM Financial Trading Framework - CLI[/bold green]\n\n"
-    welcome_content += "[bold]Workflow Steps:[/bold]\n"
-    welcome_content += "I. Analyst Team → II. Research Team → III. Trader → IV. Risk Management → V. Portfolio Management\n\n"
-    welcome_content += (
-        "[dim]Built by [Tauric Research](https://github.com/TauricResearch)[/dim]"
-    )
+def get_user_selections(
+    ticker: Optional[str] = None,
+    analysis_date: Optional[str] = None,
+    analysts: Optional[List[AnalystType]] = None,
+    research_depth: Optional[int] = None,
+    llm_provider: Optional[str] = None,
+    shallow_thinker: Optional[str] = None,
+    deep_thinker: Optional[str] = None,
+    google_thinking_level: Optional[str] = None,
+    openai_reasoning_effort: Optional[str] = None,
+    anthropic_effort: Optional[str] = None,
+):
+    """Get user selections, using provided arguments or prompting if missing."""
+    # If ticker is provided via CLI, we assume a "Direct Run" and fill missing values with smart defaults
+    # If ticker is NOT provided, we enter "Interactive Mode" for a guided experience
+    is_direct_run = ticker is not None
+    is_interactive = not is_direct_run
+    
+    if is_interactive:
+        with open(Path(__file__).parent / "static" / "welcome.txt", "r") as f:
+            welcome_ascii = f.read()
 
-    # Create and center the welcome box
-    welcome_box = Panel(
-        welcome_content,
-        border_style="green",
-        padding=(1, 2),
-        title="Welcome to TradingAgents",
-        subtitle="Multi-Agents LLM Financial Trading Framework",
-    )
-    console.print(Align.center(welcome_box))
-    console.print()
-    console.print()  # Add vertical space before announcements
+        # Create welcome box content
+        welcome_content = f"{welcome_ascii}\n"
+        welcome_content += "[bold green]TradingAgents: Multi-Agents LLM Financial Trading Framework - CLI[/bold green]\n\n"
+        welcome_content += "[bold]Workflow Steps:[/bold]\n"
+        welcome_content += "I. Analyst Team → II. Research Team → III. Trader → IV. Risk Management → V. Portfolio Management\n\n"
+        welcome_content += (
+            "[dim]Built by [Tauric Research](https://github.com/TauricResearch)[/dim]"
+        )
 
-    # Fetch and display announcements (silent on failure)
-    announcements = fetch_announcements()
-    display_announcements(console, announcements)
+        # Create and center the welcome box
+        welcome_box = Panel(
+            welcome_content,
+            border_style="green",
+            padding=(1, 2),
+            title="Welcome to TradingAgents",
+            subtitle="Multi-Agents LLM Financial Trading Framework",
+        )
+        console.print(Align.center(welcome_box))
+        console.print()
+        console.print()
 
-    # Create a boxed questionnaire for each step
+        announcements = fetch_announcements()
+        display_announcements(console, announcements)
+
+    # Helper for creating question panels
     def create_question_box(title, prompt, default=None):
         box_content = f"[bold]{title}[/bold]\n"
         box_content += f"[dim]{prompt}[/dim]"
@@ -498,106 +525,120 @@ def get_user_selections():
             box_content += f"\n[dim]Default: {default}[/dim]"
         return Panel(box_content, border_style="blue", padding=(1, 2))
 
-    # Step 1: Ticker symbol
-    console.print(
-        create_question_box(
-            "Step 1: Ticker Symbol",
-            "Enter the exact ticker symbol to analyze, including exchange suffix when needed (examples: SPY, CNC.TO, 7203.T, 0700.HK)",
-            "SPY",
-        )
-    )
-    selected_ticker = get_ticker()
+    # --- Selection Logic ---
 
-    # Step 2: Analysis date
-    default_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    console.print(
-        create_question_box(
-            "Step 2: Analysis Date",
-            "Enter the analysis date (YYYY-MM-DD)",
-            default_date,
-        )
-    )
-    analysis_date = get_analysis_date()
+    # 1. Ticker
+    if ticker is None:
+        console.print(create_question_box("Step 1: Ticker Symbol", "Enter the ticker symbol (e.g., SPY, NVDA)", "SPY"))
+        selected_ticker = get_ticker()
+    else:
+        selected_ticker = ticker.upper()
 
-    # Step 3: Select analysts
-    console.print(
-        create_question_box(
-            "Step 3: Analysts Team", "Select your LLM analyst agents for the analysis"
-        )
-    )
-    selected_analysts = select_analysts()
-    console.print(
-        f"[green]Selected analysts:[/green] {', '.join(analyst.value for analyst in selected_analysts)}"
-    )
+    # 2. Date
+    if analysis_date is None:
+        if is_direct_run:
+            selected_analysis_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        else:
+            default_date = datetime.datetime.now().strftime("%Y-%m-%d")
+            console.print(create_question_box("Step 2: Analysis Date", "Enter the analysis date (YYYY-MM-DD)", default_date))
+            selected_analysis_date = get_analysis_date()
+    else:
+        selected_analysis_date = analysis_date
 
-    # Step 4: Research depth
-    console.print(
-        create_question_box(
-            "Step 4: Research Depth", "Select your research depth level"
-        )
-    )
-    selected_research_depth = select_research_depth()
+    # 3. Analysts
+    if analysts is None or len(analysts) == 0:
+        if is_direct_run:
+            selected_analysts = [AnalystType.MARKET, AnalystType.SOCIAL, AnalystType.NEWS, AnalystType.FUNDAMENTALS]
+        else:
+            console.print(create_question_box("Step 3: Analysts Team", "Select LLM analyst agents"))
+            selected_analysts = select_analysts()
+    else:
+        selected_analysts = analysts
 
-    # Step 5: OpenAI backend
-    console.print(
-        create_question_box(
-            "Step 5: OpenAI backend", "Select which service to talk to"
-        )
-    )
-    selected_llm_provider, backend_url = select_llm_provider()
-    
-    # Step 6: Thinking agents
-    console.print(
-        create_question_box(
-            "Step 6: Thinking Agents", "Select your thinking agents for analysis"
-        )
-    )
-    selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
-    selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
+    # 4. Research Depth
+    if research_depth is None:
+        if is_direct_run:
+            selected_research_depth = 1
+        else:
+            console.print(create_question_box("Step 4: Research Depth", "Select depth level (1, 3, 5)"))
+            selected_research_depth = select_research_depth()
+    else:
+        selected_research_depth = research_depth
 
-    # Step 7: Provider-specific thinking configuration
-    thinking_level = None
-    reasoning_effort = None
-    anthropic_effort = None
+    # 5. LLM Provider
+    backend_url = None
+    if llm_provider is None:
+        if is_direct_run:
+            selected_llm_provider = DEFAULT_CONFIG["llm_provider"]
+            backend_url = SUPPORTED_PROVIDERS.get(selected_llm_provider, SUPPORTED_PROVIDERS["openai"])
+        else:
+            console.print(create_question_box("Step 5: LLM Provider", "Select service provider"))
+            selected_llm_provider, backend_url = select_llm_provider()
+    else:
+        selected_llm_provider = llm_provider.lower()
+        backend_url = SUPPORTED_PROVIDERS.get(selected_llm_provider, SUPPORTED_PROVIDERS["openai"])
 
-    provider_lower = selected_llm_provider.lower()
-    if provider_lower == "google":
-        console.print(
-            create_question_box(
-                "Step 7: Thinking Mode",
-                "Configure Gemini thinking mode"
-            )
-        )
-        thinking_level = ask_gemini_thinking_config()
-    elif provider_lower == "openai":
-        console.print(
-            create_question_box(
-                "Step 7: Reasoning Effort",
-                "Configure OpenAI reasoning effort level"
-            )
-        )
-        reasoning_effort = ask_openai_reasoning_effort()
-    elif provider_lower == "anthropic":
-        console.print(
-            create_question_box(
-                "Step 7: Effort Level",
-                "Configure Claude effort level"
-            )
-        )
-        anthropic_effort = ask_anthropic_effort()
+    # 6. Thinking Agents
+    if shallow_thinker is None:
+        if is_direct_run:
+            selected_shallow_thinker = DEFAULT_CONFIG["quick_think_llm"]
+        else:
+            console.print(create_question_box("Step 6: Thinking Agents", "Select shallow thinking model"))
+            selected_shallow_thinker = select_shallow_thinking_agent(selected_llm_provider)
+    else:
+        selected_shallow_thinker = shallow_thinker
+
+    if deep_thinker is None:
+        if is_direct_run:
+            selected_deep_thinker = DEFAULT_CONFIG["deep_think_llm"]
+        else:
+            selected_deep_thinker = select_deep_thinking_agent(selected_llm_provider)
+    else:
+        selected_deep_thinker = deep_thinker
+
+    # 7. Provider Config
+    selected_google_thinking_level = google_thinking_level
+    selected_openai_reasoning_effort = openai_reasoning_effort
+    selected_anthropic_effort = anthropic_effort
+
+    if not is_direct_run:
+        provider_lower = selected_llm_provider.lower()
+        if provider_lower == "google" and google_thinking_level is None:
+            console.print(create_question_box("Step 7: Thinking Mode", "Configure Gemini thinking mode"))
+            selected_google_thinking_level = ask_gemini_thinking_config()
+        elif provider_lower == "openai" and openai_reasoning_effort is None:
+            console.print(create_question_box("Step 7: Reasoning Effort", "Configure OpenAI reasoning effort level"))
+            selected_openai_reasoning_effort = ask_openai_reasoning_effort()
+        elif provider_lower == "anthropic" and anthropic_effort is None:
+            console.print(create_question_box("Step 7: Effort Level", "Configure Claude effort level"))
+            selected_anthropic_effort = ask_anthropic_effort()
 
     return {
         "ticker": selected_ticker,
-        "analysis_date": analysis_date,
+        "analysis_date": selected_analysis_date,
         "analysts": selected_analysts,
         "research_depth": selected_research_depth,
-        "llm_provider": selected_llm_provider.lower(),
+        "llm_provider": selected_llm_provider,
         "backend_url": backend_url,
         "shallow_thinker": selected_shallow_thinker,
         "deep_thinker": selected_deep_thinker,
-        "google_thinking_level": thinking_level,
-        "openai_reasoning_effort": reasoning_effort,
-        "anthropic_effort": anthropic_effort,
+        "google_thinking_level": selected_google_thinking_level,
+        "openai_reasoning_effort": selected_openai_reasoning_effort,
+        "anthropic_effort": selected_anthropic_effort,
+    }
+
+    return {
+        "ticker": selected_ticker,
+        "analysis_date": selected_analysis_date,
+        "analysts": selected_analysts,
+        "research_depth": selected_research_depth,
+        "llm_provider": selected_llm_provider,
+        "backend_url": backend_url,
+        "shallow_thinker": selected_shallow_thinker,
+        "deep_thinker": selected_deep_thinker,
+        "google_thinking_level": selected_google_thinking_level,
+        "openai_reasoning_effort": selected_openai_reasoning_effort,
+        "anthropic_effort": selected_anthropic_effort,
     }
 
 
@@ -915,11 +956,36 @@ def format_tool_args(args, max_length=80) -> str:
         return result[:max_length - 3] + "..."
     return result
 
-def run_analysis():
-    # First get all user selections
-    selections = get_user_selections()
-
-    # Create config with selected research depth
+def run_analysis(
+    ticker: Optional[str] = None,
+    analysis_date: Optional[str] = None,
+    analysts: Optional[List[AnalystType]] = None,
+    research_depth: Optional[int] = None,
+    llm_provider: Optional[str] = None,
+    shallow_thinker: Optional[str] = None,
+    deep_thinker: Optional[str] = None,
+    google_thinking_level: Optional[str] = None,
+    openai_reasoning_effort: Optional[str] = None,
+    anthropic_effort: Optional[str] = None,
+    save_report: Optional[bool] = None,
+    output_path: Optional[str] = None,
+    print_report: Optional[bool] = None,
+):
+    # First get all user selections (using provided args or prompting)
+    selections = get_user_selections(
+        ticker=ticker,
+        analysis_date=analysis_date,
+        analysts=analysts,
+        research_depth=research_depth,
+        llm_provider=llm_provider,
+        shallow_thinker=shallow_thinker,
+        deep_thinker=deep_thinker,
+        google_thinking_level=google_thinking_level,
+        openai_reasoning_effort=openai_reasoning_effort,
+        anthropic_effort=anthropic_effort,
+    )
+    
+    is_direct_run = ticker is not None
     config = DEFAULT_CONFIG.copy()
     config["max_debate_rounds"] = selections["research_depth"]
     config["max_risk_discuss_rounds"] = selections["research_depth"]
@@ -1165,16 +1231,31 @@ def run_analysis():
     # Post-analysis prompts (outside Live context for clean interaction)
     console.print("\n[bold cyan]Analysis Complete![/bold cyan]\n")
 
+    # Determine save choice
+    should_save = save_report
+    if should_save is None:
+        if is_direct_run:
+            should_save = True  # Default to save in direct run
+        else:
+            save_choice = typer.prompt("Save report?", default="Y").strip().upper()
+            should_save = save_choice in ("Y", "YES", "")
+
     # Prompt to save report
-    save_choice = typer.prompt("Save report?", default="Y").strip().upper()
-    if save_choice in ("Y", "YES", ""):
+    if should_save:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         default_path = Path.cwd() / "reports" / f"{selections['ticker']}_{timestamp}"
-        save_path_str = typer.prompt(
-            "Save path (press Enter for default)",
-            default=str(default_path)
-        ).strip()
-        save_path = Path(save_path_str)
+        
+        if output_path:
+            save_path = Path(output_path)
+        elif is_direct_run:
+            save_path = default_path
+        else:
+            save_path_str = typer.prompt(
+                "Save path (press Enter for default)",
+                default=str(default_path)
+            ).strip()
+            save_path = Path(save_path_str)
+            
         try:
             report_file = save_report_to_disk(final_state, selections["ticker"], save_path)
             console.print(f"\n[green]✓ Report saved to:[/green] {save_path.resolve()}")
@@ -1182,15 +1263,95 @@ def run_analysis():
         except Exception as e:
             console.print(f"[red]Error saving report: {e}[/red]")
 
-    # Prompt to display full report
-    display_choice = typer.prompt("\nDisplay full report on screen?", default="Y").strip().upper()
-    if display_choice in ("Y", "YES", ""):
+    # Determine display choice
+    should_print = print_report
+    if should_print is None:
+        if is_direct_run:
+            should_print = False  # Default to NO print in direct run to keep CLI clean
+        else:
+            display_choice = typer.prompt("\nDisplay full report on screen?", default="Y").strip().upper()
+            should_print = display_choice in ("Y", "YES", "")
+
+    if should_print:
         display_complete_report(final_state)
 
 
 @app.command()
-def analyze():
-    run_analysis()
+def analyze(
+    ticker: Optional[str] = typer.Option(
+        None, "--ticker", "-t", 
+        help="Ticker symbol to analyze. Examples: 'NVDA', '7203.T' (Japan), '0700.HK' (HK)."
+    ),
+    date: Optional[str] = typer.Option(
+        None, "--date", "-d", 
+        help="Analysis date in 'YYYY-MM-DD' format. Defaults to current date if omitted."
+    ),
+    analysts: Optional[List[AnalystType]] = typer.Option(
+        None, "--analyst", "-a", 
+        help="LLM analyst agents to run. Options: market, social, news, fundamentals. Use multiple times for many agents."
+    ),
+    depth: Optional[int] = typer.Option(
+        None, "--depth", 
+        help="Research depth level: 1 (Fast), 3 (Balanced), or 5 (Comprehensive)."
+    ),
+    provider: Optional[str] = typer.Option(
+        None, "--provider", 
+        help="LLM provider service. Options: openai, google, anthropic, xai, openrouter, ollama, bailian."
+    ),
+    shallow: Optional[str] = typer.Option(
+        None, "--shallow", 
+        help="Model for quick analysis task. Examples: 'gpt-5-mini', 'gemini-2.0-flash', 'claude-3-5-haiku'."
+    ),
+    deep: Optional[str] = typer.Option(
+        None, "--deep", 
+        help="Model for deep reasoning/planning. Examples: 'gpt-5.2', 'gemini-2.0-pro', 'claude-3-5-sonnet'."
+    ),
+    google_thinking: Optional[str] = typer.Option(
+        None, "--google-thinking", 
+        help="Thinking level for Gemini models. Options: high, medium, low."
+    ),
+    openai_reasoning: Optional[str] = typer.Option(
+        None, "--openai-reasoning", 
+        help="Reasoning effort level for OpenAI o-series. Options: high, medium, low."
+    ),
+    anthropic_effort: Optional[str] = typer.Option(
+        None, "--anthropic-effort", 
+        help="Budget effort for Claude models. Options: high, medium, low."
+    ),
+    save: Optional[bool] = typer.Option(
+        None, "--save/--no-save", 
+        help="Whether to save the analysis report to disk. Defaults to True if --ticker is provided."
+    ),
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", 
+        help="Custom path to save the report."
+    ),
+    print: Optional[bool] = typer.Option(
+        None, "--print/--no-print", 
+        help="Whether to print the full report to the console. Defaults to False if --ticker is provided."
+    ),
+):
+    """
+    Run a new analysis. 
+    
+    If --ticker is provided, missing parameters will use smart defaults for a quick start.
+    If --ticker is omitted, the CLI enters Interactive Mode to guide you through setup.
+    """
+    run_analysis(
+        ticker=ticker,
+        analysis_date=date,
+        analysts=analysts,
+        research_depth=depth,
+        llm_provider=provider,
+        shallow_thinker=shallow,
+        deep_thinker=deep,
+        google_thinking_level=google_thinking,
+        openai_reasoning_effort=openai_reasoning,
+        anthropic_effort=anthropic_effort,
+        save_report=save,
+        output_path=output,
+        print_report=print,
+    )
 
 
 if __name__ == "__main__":
