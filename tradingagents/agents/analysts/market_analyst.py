@@ -75,11 +75,12 @@ MACD 相关：
 
         result = chain.invoke(state["messages"])
 
-        report = ""
+        # Capture content if available, even if there are tool calls
+        # (though typically LLM provides content only after tools are done)
+        report = result.content if result.content else ""
 
-        if len(result.tool_calls) == 0:
-            report = result.content
-
+        # If there's content and no further tool calls, it's highly likely the final report
+        # Or if the content is substantial, we should capture it anyway
         return {
             "messages": [result],
             "market_report": report,

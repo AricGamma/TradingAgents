@@ -25,6 +25,7 @@ from rich.rule import Rule
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.agents.utils.portfolio_utils import load_portfolio_yaml, format_portfolio_for_prompt
 from cli.models import AnalystType
 from cli.utils import *
 from cli.announcements import fetch_announcements, display_announcements
@@ -35,7 +36,8 @@ console = Console()
 app = typer.Typer(
     name="TradingAgents",
     help="TradingAgents CLI: Multi-Agents LLM Financial Trading Framework",
-    add_completion=True,  # Enable shell completion
+    add_completion=True,
+    no_args_is_help=False,  # Don't show help by default, enter interactive instead
 )
 
 
@@ -45,6 +47,7 @@ class MessageBuffer:
     FIXED_AGENTS = {
         "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
         "Trading Team": ["Trader"],
+        "Portfolio Advisor": ["Portfolio Analyst"],
         "Risk Management": ["Aggressive Analyst", "Neutral Analyst", "Conservative Analyst"],
         "Portfolio Management": ["Portfolio Manager"],
     }
@@ -67,6 +70,7 @@ class MessageBuffer:
         "fundamentals_report": ("fundamentals", "Fundamentals Analyst"),
         "investment_plan": (None, "Research Manager"),
         "trader_investment_plan": (None, "Trader"),
+        "portfolio_report": (None, "Portfolio Analyst"),
         "final_trade_decision": (None, "Portfolio Manager"),
     }
 
@@ -175,10 +179,11 @@ class MessageBuffer:
                 "fundamentals_report": "Fundamentals Analysis",
                 "investment_plan": "Research Team Decision",
                 "trader_investment_plan": "Trading Team Plan",
+                "portfolio_report": "Portfolio Advisor Analysis",
                 "final_trade_decision": "Portfolio Management Decision",
             }
             self.current_report = (
-                f"### {section_titles[latest_section]}\n{latest_content}"
+                f"### {section_titles.get(latest_section, latest_section)}\n{latest_content}"
             )
 
         # Update the final complete report
@@ -722,9 +727,16 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         (trading_dir / "trader.md").write_text(final_state["trader_investment_plan"])
         sections.append(f"## III. Trading Team Plan\n\n### Trader\n{final_state['trader_investment_plan']}")
 
-    # 4. Risk Management
+    # 4. Portfolio Advisor
+    if final_state.get("portfolio_report"):
+        advisor_dir = save_path / "4_advisor"
+        advisor_dir.mkdir(exist_ok=True)
+        (advisor_dir / "portfolio_analysis.md").write_text(final_state["portfolio_report"])
+        sections.append(f"## IV. Portfolio Advisor Analysis\n\n### Portfolio Analyst\n{final_state['portfolio_report']}")
+
+    # 5. Risk Management
     if final_state.get("risk_debate_state"):
-        risk_dir = save_path / "4_risk"
+        risk_dir = save_path / "5_risk"
         risk = final_state["risk_debate_state"]
         risk_parts = []
         if risk.get("aggressive_history"):
@@ -741,14 +753,14 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
             risk_parts.append(("Neutral Analyst", risk["neutral_history"]))
         if risk_parts:
             content = "\n\n".join(f"### {name}\n{text}" for name, text in risk_parts)
-            sections.append(f"## IV. Risk Management Team Decision\n\n{content}")
+            sections.append(f"## V. Risk Management Team Decision\n\n{content}")
 
-        # 5. Portfolio Manager
+        # 6. Portfolio Manager
         if risk.get("judge_decision"):
-            portfolio_dir = save_path / "5_portfolio"
+            portfolio_dir = save_path / "6_portfolio"
             portfolio_dir.mkdir(exist_ok=True)
             (portfolio_dir / "decision.md").write_text(risk["judge_decision"])
-            sections.append(f"## V. Portfolio Manager Decision\n\n### Portfolio Manager\n{risk['judge_decision']}")
+            sections.append(f"## VI. Portfolio Manager Decision\n\n### Portfolio Manager\n{risk['judge_decision']}")
 
     # Write consolidated report
     header = f"# Trading Analysis Report: {ticker}\n\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
@@ -796,7 +808,12 @@ def display_complete_report(final_state):
         console.print(Panel("[bold]III. Trading Team Plan[/bold]", border_style="yellow"))
         console.print(Panel(Markdown(final_state["trader_investment_plan"]), title="Trader", border_style="blue", padding=(1, 2)))
 
-    # IV. Risk Management Team
+    # IV. Portfolio Advisor
+    if final_state.get("portfolio_report"):
+        console.print(Panel("[bold]IV. Portfolio Advisor Analysis[/bold]", border_style="green"))
+        console.print(Panel(Markdown(final_state["portfolio_report"]), title="Portfolio Analyst", border_style="blue", padding=(1, 2)))
+
+    # V. Risk Management Team
     if final_state.get("risk_debate_state"):
         risk = final_state["risk_debate_state"]
         risk_reports = []
@@ -807,13 +824,13 @@ def display_complete_report(final_state):
         if risk.get("neutral_history"):
             risk_reports.append(("Neutral Analyst", risk["neutral_history"]))
         if risk_reports:
-            console.print(Panel("[bold]IV. Risk Management Team Decision[/bold]", border_style="red"))
+            console.print(Panel("[bold]V. Risk Management Team Decision[/bold]", border_style="red"))
             for title, content in risk_reports:
                 console.print(Panel(Markdown(content), title=title, border_style="blue", padding=(1, 2)))
 
-        # V. Portfolio Manager Decision
+        # VI. Portfolio Manager Decision
         if risk.get("judge_decision"):
-            console.print(Panel("[bold]V. Portfolio Manager Decision[/bold]", border_style="green"))
+            console.print(Panel("[bold]VI. Portfolio Manager Decision[/bold]", border_style="green"))
             console.print(Panel(Markdown(risk["judge_decision"]), title="Portfolio Manager", border_style="blue", padding=(1, 2)))
 
 
@@ -970,7 +987,15 @@ def run_analysis(
     save_report: Optional[bool] = None,
     output_path: Optional[str] = None,
     print_report: Optional[bool] = None,
+    portfolio_path: Optional[str] = None,
 ):
+    # Load portfolio data if provided
+    portfolio_context = "No portfolio data provided."
+    if portfolio_path:
+        portfolio_data = load_portfolio_yaml(portfolio_path)
+        if portfolio_data:
+            portfolio_context = format_portfolio_for_prompt(portfolio_data)
+
     # First get all user selections (using provided args or prompting)
     selections = get_user_selections(
         ticker=ticker,
@@ -1098,7 +1123,9 @@ def run_analysis(
 
         # Initialize state and get graph args with callbacks
         init_agent_state = graph.propagator.create_initial_state(
-            selections["ticker"], selections["analysis_date"]
+            selections["ticker"], 
+            selections["analysis_date"],
+            portfolio_context=portfolio_context
         )
         # Pass callbacks to graph config for tool execution tracking
         # (LLM tracking is handled separately via LLM constructor)
@@ -1165,6 +1192,15 @@ def run_analysis(
                 )
                 if message_buffer.agent_status.get("Trader") != "completed":
                     message_buffer.update_agent_status("Trader", "completed")
+                    message_buffer.update_agent_status("Portfolio Analyst", "in_progress")
+
+            # Portfolio Advisor
+            if chunk.get("portfolio_report"):
+                message_buffer.update_report_section(
+                    "portfolio_report", chunk["portfolio_report"]
+                )
+                if message_buffer.agent_status.get("Portfolio Analyst") != "completed":
+                    message_buffer.update_agent_status("Portfolio Analyst", "completed")
                     message_buffer.update_agent_status("Aggressive Analyst", "in_progress")
 
             # Risk Management Team - Handle Risk Debate State
@@ -1243,13 +1279,15 @@ def run_analysis(
     # Prompt to save report
     if should_save:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        default_path = Path.cwd() / "reports" / f"{selections['ticker']}_{timestamp}"
+        sub_dir_name = f"{selections['ticker']}_{timestamp}"
         
         if output_path:
-            save_path = Path(output_path)
+            # If output_path is provided, use it as the base directory
+            save_path = Path(output_path) / sub_dir_name
         elif is_direct_run:
-            save_path = default_path
+            save_path = Path.cwd() / "reports" / sub_dir_name
         else:
+            default_path = Path.cwd() / "reports" / sub_dir_name
             save_path_str = typer.prompt(
                 "Save path (press Enter for default)",
                 default=str(default_path)
@@ -1276,7 +1314,7 @@ def run_analysis(
         display_complete_report(final_state)
 
 
-@app.command()
+@app.command(name="analyze")
 def analyze(
     ticker: Optional[str] = typer.Option(
         None, "--ticker", "-t", 
@@ -1318,6 +1356,10 @@ def analyze(
         None, "--anthropic-effort", 
         help="Budget effort for Claude models. Options: high, medium, low."
     ),
+    portfolio: Optional[str] = typer.Option(
+        None, "--portfolio", "-p", 
+        help="Path to user portfolio YAML file for personalized analysis. If ticker is omitted, all stocks in portfolio will be analyzed."
+    ),
     save: Optional[bool] = typer.Option(
         None, "--save/--no-save", 
         help="Whether to save the analysis report to disk. Defaults to True if --ticker is provided."
@@ -1334,9 +1376,45 @@ def analyze(
     """
     Run a new analysis. 
     
-    If --ticker is provided, missing parameters will use smart defaults for a quick start.
-    If --ticker is omitted, the CLI enters Interactive Mode to guide you through setup.
+    If --ticker is provided, analyze that specific stock in the context of your portfolio (if provided).
+    If --ticker is omitted but --portfolio is provided, automatically scan all stocks held in the portfolio.
+    If both are omitted, the CLI enters Interactive Mode.
     """
+    
+    # Portfolio Batch Scanning Logic
+    if ticker is None and portfolio is not None:
+        portfolio_data = load_portfolio_yaml(portfolio)
+        if portfolio_data and portfolio_data.holdings:
+            tickers_to_scan = [h.ticker for h in portfolio_data.holdings]
+            console.print(Panel(
+                f"[bold green]Portfolio Scan Mode Activated[/bold green]\n"
+                f"Found [bold]{len(tickers_to_scan)}[/bold] tickers in portfolio: {', '.join(tickers_to_scan)}\n"
+                f"Starting sequential analysis...",
+                border_style="green"
+            ))
+            
+            for t in tickers_to_scan:
+                run_analysis(
+                    ticker=t,
+                    analysis_date=date,
+                    analysts=analysts,
+                    research_depth=depth,
+                    llm_provider=provider,
+                    shallow_thinker=shallow,
+                    deep_thinker=deep,
+                    google_thinking_level=google_thinking,
+                    openai_reasoning_effort=openai_reasoning,
+                    anthropic_effort=anthropic_effort,
+                    save_report=save,
+                    output_path=output,
+                    print_report=print,
+                    portfolio_path=portfolio,
+                )
+            return
+        else:
+            console.print("[yellow]Warning: Portfolio provided but no holdings found. Falling back to interactive mode.[/yellow]")
+
+    # Single Stock or Interactive Mode
     run_analysis(
         ticker=ticker,
         analysis_date=date,
@@ -1351,6 +1429,7 @@ def analyze(
         save_report=save,
         output_path=output,
         print_report=print,
+        portfolio_path=portfolio,
     )
 
 
