@@ -1,4 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import ToolMessage
 import time
 import json
 from tradingagents.agents.utils.agent_utils import (
@@ -59,7 +60,7 @@ MACD 相关：
                     " will help where you left off. Execute what you can to make progress."
                     " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
                     " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
+                    " You have access to the following tools: {tool_names}.\\n{system_message}"
                     "For your reference, the current date is {current_date}. {instrument_context}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
@@ -73,16 +74,64 @@ MACD 相关：
 
         chain = prompt | llm.bind_tools(tools)
 
-        result = chain.invoke(state["messages"])
+        # ============================================
+        # 多轮工具调用循环 - 修复百炼兼容性问题
+        # ============================================
+        # 问题：当 LLM 调用工具时，response.content 为空字符串
+        # 解决：实现多轮调用，执行工具后将结果反馈给 LLM，直到获得最终报告
+        # ============================================
+        messages = list(state["messages"])
+        max_iterations = 5  # 防止无限循环
+        iteration = 0
+        report = ""
+        last_result = None
+        
+        while iteration < max_iterations:
+            iteration += 1
+            result = chain.invoke(messages)
+            last_result = result
+            
+            # 检查是否有工具调用
+            tool_calls = getattr(result, 'tool_calls', [])
+            
+            if tool_calls:
+                # LLM 请求调用工具，执行工具并将结果添加回消息
+                messages.append(result)  # 添加 AI 消息（包含 tool_calls）
+                
+                # 执行每个工具调用
+                for tool_call in tool_calls:
+                    tool_name = tool_call.get('name')
+                    tool_args = tool_call.get('args', {})
+                    tool_id = tool_call.get('id')
+                    
+                    # 查找并执行工具
+                    tool_result = None
+                    for tool in tools:
+                        if tool.name == tool_name:
+                            try:
+                                tool_result = tool.invoke(tool_args)
+                            except Exception as e:
+                                tool_result = f"Error executing tool {tool_name}: {str(e)}"
+                            break
+                    
+                    if tool_result is not None:
+                        # 添加工具结果到消息
+                        messages.append(ToolMessage(content=str(tool_result), tool_call_id=tool_id))
+                
+                # 继续下一轮迭代，让 LLM 基于工具结果生成报告
+                continue
+            else:
+                # 没有工具调用，LLM 返回了最终报告
+                report = result.content if result.content else ""
+                messages.append(result)
+                break
+        
+        # 如果达到最大迭代次数仍未获得报告，尝试使用最后一次响应的内容
+        if not report and last_result:
+            report = last_result.content if last_result.content else ""
 
-        # Capture content if available, even if there are tool calls
-        # (though typically LLM provides content only after tools are done)
-        report = result.content if result.content else ""
-
-        # If there's content and no further tool calls, it's highly likely the final report
-        # Or if the content is substantial, we should capture it anyway
         return {
-            "messages": [result],
+            "messages": messages,
             "market_report": report,
         }
 
