@@ -53,7 +53,7 @@ def create_news_analyst(llm):
         # 多轮工具调用循环 - 修复百炼兼容性问题
         # ============================================
         messages = list(state["messages"])
-        max_iterations = 5
+        max_iterations = 8  # 增加迭代次数，确保复杂查询能完成
         iteration = 0
         report = ""
         last_result = None

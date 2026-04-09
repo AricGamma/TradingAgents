@@ -47,8 +47,11 @@ def create_social_media_analyst(llm):
         # ============================================
         # 多轮工具调用循环 - 修复百炼兼容性问题
         # ============================================
+        # 问题：当 LLM 调用工具时，response.content 为空字符串
+        # 解决：实现多轮调用，执行工具后将结果反馈给 LLM，直到获得最终报告
+        # ============================================
         messages = list(state["messages"])
-        max_iterations = 5
+        max_iterations = 8  # 增加迭代次数，确保复杂查询能完成
         iteration = 0
         report = ""
         last_result = None

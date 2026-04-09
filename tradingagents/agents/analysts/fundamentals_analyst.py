@@ -62,7 +62,7 @@ def create_fundamentals_analyst(llm):
         # 解决：实现多轮调用，执行工具后将结果反馈给 LLM，直到获得最终报告
         # ============================================
         messages = list(state["messages"])
-        max_iterations = 5  # 防止无限循环
+        max_iterations = 8  # 增加迭代次数，确保复杂查询能完成
         iteration = 0
         report = ""
         last_result = None
