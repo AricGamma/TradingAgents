@@ -51,7 +51,7 @@ def create_social_media_analyst(llm):
         # 解决：实现多轮调用，执行工具后将结果反馈给 LLM，直到获得最终报告
         # ============================================
         messages = list(state["messages"])
-        max_iterations = 8  # 增加迭代次数，确保复杂查询能完成
+        max_iterations = 10  # 进一步增加迭代次数，确保复杂查询能完成
         iteration = 0
         report = ""
         last_result = None

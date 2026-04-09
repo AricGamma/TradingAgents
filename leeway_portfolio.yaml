@@ -1,0 +1,52 @@
+# 账户总体信息
+total_value: 119000        # 账户总资产（含持仓市值 + 现金）
+cash: 116000               # 当前可用现金（用于判断补仓能力）
+currency: "USD"             # 货币单位 (默认: USD)
+risk_tolerance: "moderate"  # 风险偏好: conservative(保守), moderate(稳健), aggressive(激进)
+
+# 持仓明细 (含关注列表)
+holdings:
+  - ticker: "BABA"
+    quantity: 0
+    avg_cost: 0
+    sector: "E-commerce"
+
+  - ticker: "XPEV"
+    quantity: 85
+    avg_cost: 18.6
+    sector: "EV/Auto"
+
+  - ticker: "NIO"
+    quantity: 0
+    avg_cost: 0
+    sector: "EV/Auto"
+
+  - ticker: "NVDA"
+    quantity: 0
+    avg_cost: 0
+    sector: "Semiconductors"
+
+  - ticker: "AAPL"
+    quantity: 0
+    avg_cost: 0
+    sector: "Consumer Electronics"
+
+  - ticker: "TSLA"
+    quantity: 0
+    avg_cost: 0
+    sector: "Auto/AI"
+
+  - ticker: "GOOGL"
+    quantity: 0
+    avg_cost: 0
+    sector: "Tech/Ads"
+
+  - ticker: "META"
+    quantity: 0
+    avg_cost: 0
+    sector: "Social Media"
+
+  - ticker: "GLD"
+    quantity: 0
+    avg_cost: 0
+    sector: "Commodities/Gold"
