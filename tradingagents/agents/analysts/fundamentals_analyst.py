@@ -110,6 +110,16 @@ def create_fundamentals_analyst(llm):
         # 如果达到最大迭代次数仍未获得报告，尝试使用最后一次响应的内容
         if not report and last_result:
             report = last_result.content if last_result.content else ""
+            # 确保最后一条消息是 AIMessage（不是 ToolMessage），以便后续条件判断
+            if not isinstance(last_result, ToolMessage):
+                messages.append(last_result)
+
+        # 重要：确保返回的 messages 最后一条是 AIMessage
+        # 这样 conditional_logic.py 中的 last_message.tool_calls 检查才能正常工作
+        # 如果最后一条是 ToolMessage，需要添加一个空的 AIMessage 作为标记
+        if messages and isinstance(messages[-1], ToolMessage):
+            from langchain_core.messages import AIMessage
+            messages.append(AIMessage(content=report if report else "Analysis completed."))
 
         return {
             "messages": messages,
